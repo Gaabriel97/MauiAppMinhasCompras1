@@ -5,24 +5,24 @@ namespace MauiAppMinhasCompras1.Views;
 
 public partial class ListaProduto : ContentPage
 {
-    ObservableCollection<Produto> Lista = new ObservableCollection<Produto>();
+    ObservableCollection<Produto> lista = new ObservableCollection<Produto>();
 
     public ListaProduto()
     {
         InitializeComponent();
 
-        lst_produtos.ItemsSource = Lista;
+        lst_produtos.ItemsSource = lista;
     }
 
-      protected async override void OnAppearing()
+    protected async override void OnAppearing()
     {
         try
         {
-            Lista.Clear();
+            lista.Clear();
 
             List<Produto> tmp = await App.Db.GetAll();
 
-            tmp.ForEach(i => Lista.Add(i));
+            tmp.ForEach(i => lista.Add(i));
         }
         catch (Exception ex)
         {
@@ -51,11 +51,11 @@ public partial class ListaProduto : ContentPage
 
             lst_produtos.IsRefreshing = true;
 
-            Lista.Clear();
+            lista.Clear();
 
             List<Produto> tmp = await App.Db.Search(q);
 
-            tmp.ForEach(i => Lista.Add(i));
+            tmp.ForEach(i => lista.Add(i));
         }
         catch (Exception ex)
         {
@@ -69,7 +69,7 @@ public partial class ListaProduto : ContentPage
 
     private void ToolbarItem_Clicked_1(object sender, EventArgs e)
     {
-        double soma = Lista.Sum(i => i.Total);
+        double soma = lista.Sum(i => i.Total);
 
         string msg = $"O total é {soma:C}";
 
@@ -90,7 +90,7 @@ public partial class ListaProduto : ContentPage
             if (confirm)
             {
                 await App.Db.Delete(p.Id);
-                Lista.Remove(p);
+                lista.Remove(p);
             }
         }
         catch (Exception ex)
@@ -107,7 +107,7 @@ public partial class ListaProduto : ContentPage
 
             Navigation.PushAsync(new Views.EditarProduto
             {
-                BindingContext = p
+                BindingContext = p,
             });
         }
         catch (Exception ex)
@@ -120,18 +120,38 @@ public partial class ListaProduto : ContentPage
     {
         try
         {
-            Lista.Clear();
+            lista.Clear();
 
             List<Produto> tmp = await App.Db.GetAll();
 
-            tmp.ForEach(i => Lista.Add(i));
+            tmp.ForEach(i => lista.Add(i));
         }
         catch (Exception ex)
         {
             await DisplayAlert("Ops", ex.Message, "OK");
-        } finally
+
+        }
+        finally
         {
             lst_produtos.IsRefreshing = false;
         }
     }
+
+    private List<dynamic> GerarRelatorio()
+    {
+        return lista
+            .GroupBy(p => p.Categoria)
+            .Select(g => new
+            {
+                Categoria = g.Key,
+                TotalGasto = g.Sum(p => p.Total)
+            })
+            .ToList<dynamic>();
+    }
+        private async void ExibirRelatorio_Clicked(object sender, EventArgs e)
+    {
+        var relatorio = GerarRelatorio();
+        await Navigation.PushAsync(new Views.RelatorioCategoria { BindingContext = relatorio });
+    }
+
 }
